@@ -1,86 +1,200 @@
 #include <iostream>
 #include <vector>
+#include <fstream>
+#include <algorithm>
 using namespace std;
 
 class Student {
-public:
-    int roll;
+private:
+    int id;
     string name;
-    int marks;
+    float marks;
+
+public:
+    Student() {}
+
+    Student(int i, string n, float m) {
+        id = i;
+        name = n;
+        marks = m;
+    }
+
+    int getId() const { return id; }
+    string getName() const { return name; }
+    float getMarks() const { return marks; }
+
+    void update() {
+        cout << "Enter new name: ";
+        cin.ignore();
+        getline(cin, name);
+
+        cout << "Enter new marks: ";
+        cin >> marks;
+    }
+
+    void display() const {
+        cout << "ID: " << id 
+             << " | Name: " << name 
+             << " | Marks: " << marks << endl;
+    }
+
+    string serialize() const {
+        return to_string(id) + "," + name + "," + to_string(marks);
+    }
+
+    static Student deserialize(string line) {
+        int pos1 = line.find(',');
+        int pos2 = line.rfind(',');
+
+        int id = stoi(line.substr(0, pos1));
+        string name = line.substr(pos1 + 1, pos2 - pos1 - 1);
+        float marks = stof(line.substr(pos2 + 1));
+
+        return Student(id, name, marks);
+    }
 };
 
 vector<Student> students;
 
+// Load from file
+void loadData() {
+    ifstream file("students.txt");
+    string line;
+
+    while (getline(file, line)) {
+        students.push_back(Student::deserialize(line));
+    }
+    file.close();
+}
+
+// Save to file
+void saveData() {
+    ofstream file("students.txt");
+
+    for (auto &s : students) {
+        file << s.serialize() << endl;
+    }
+    file.close();
+}
+
+// Add student
 void addStudent() {
-    Student s;
-    cout << "Enter Roll Number: ";
-    cin >> s.roll;
+    int id;
+    string name;
+    float marks;
+
+    cout << "Enter ID: ";
+    cin >> id;
+    cin.ignore();
+
     cout << "Enter Name: ";
-    cin >> s.name;
+    getline(cin, name);
+
     cout << "Enter Marks: ";
-    cin >> s.marks;
+    cin >> marks;
 
-    students.push_back(s);
-    cout << "Student Added Successfully!\n";
+    students.push_back(Student(id, name, marks));
+    saveData();
+
+    cout << "✅ Student Added\n";
 }
 
-void viewStudents() {
-    if (students.empty()) {
-        cout << "No student records found.\n";
-        return;
-    }
-
-    for (auto s : students) {
-        cout << "Roll: " << s.roll
-             << ", Name: " << s.name
-             << ", Marks: " << s.marks << endl;
+// Display all
+void displayStudents() {
+    cout << "\n--- Student List ---\n";
+    for (auto &s : students) {
+        s.display();
     }
 }
 
+// Search
 void searchStudent() {
-    int roll;
-    cout << "Enter Roll Number to search: ";
-    cin >> roll;
+    int id;
+    cout << "Enter ID: ";
+    cin >> id;
 
-    for (auto s : students) {
-        if (s.roll == roll) {
-            cout << "Student Found!\n";
-            cout << "Name: " << s.name << ", Marks: " << s.marks << endl;
+    for (auto &s : students) {
+        if (s.getId() == id) {
+            s.display();
             return;
         }
     }
-    cout << "Student not found.\n";
+
+    cout << "❌ Not Found\n";
 }
 
+// Delete
+void deleteStudent() {
+    int id;
+    cout << "Enter ID: ";
+    cin >> id;
+
+    auto it = remove_if(students.begin(), students.end(),
+        [id](Student &s) { return s.getId() == id; });
+
+    if (it != students.end()) {
+        students.erase(it, students.end());
+        saveData();
+        cout << "✅ Deleted\n";
+    } else {
+        cout << "❌ Not Found\n";
+    }
+}
+
+// Update
+void updateStudent() {
+    int id;
+    cout << "Enter ID: ";
+    cin >> id;
+
+    for (auto &s : students) {
+        if (s.getId() == id) {
+            s.update();
+            saveData();
+            cout << "✅ Updated\n";
+            return;
+        }
+    }
+
+    cout << "❌ Not Found\n";
+}
+
+// Sort by marks
+void sortStudents() {
+    sort(students.begin(), students.end(),
+         [](Student a, Student b) {
+             return a.getMarks() > b.getMarks();
+         });
+
+    cout << "✅ Sorted by Marks (Descending)\n";
+    displayStudents();
+}
+
+// Main menu
 int main() {
+    loadData();
+
     int choice;
 
     do {
         cout << "\n--- Student Management System ---\n";
-        cout << "1. Add Student\n";
-        cout << "2. View Students\n";
-        cout << "3. Search Student\n";
-        cout << "4. Exit\n";
-        cout << "Enter your choice: ";
+        cout << "1. Add\n2. Display\n3. Search\n4. Delete\n5. Update\n6. Sort by Marks\n7. Exit\n";
+        cout << "Enter choice: ";
         cin >> choice;
 
         switch (choice) {
-        case 1:
-            addStudent();
-            break;
-        case 2:
-            viewStudents();
-            break;
-        case 3:
-            searchStudent();
-            break;
-        case 4:
-            cout << "Exiting...\n";
-            break;
-        default:
-            cout << "Invalid choice!\n";
+            case 1: addStudent(); break;
+            case 2: displayStudents(); break;
+            case 3: searchStudent(); break;
+            case 4: deleteStudent(); break;
+            case 5: updateStudent(); break;
+            case 6: sortStudents(); break;
+            case 7: cout << "Exiting...\n"; break;
+            default: cout << "Invalid\n";
         }
-    } while (choice != 4);
+
+    } while (choice != 7);
 
     return 0;
 }
+
